@@ -253,6 +253,9 @@ class TTSGui(QWidget):
         self.voice_tabs.addTab(self.shared_voices_group_widget, "Shared Voice") # Add as tab
         voice_settings_group.addWidget(self.voice_tabs) # Add the tab widget to the voice settings group
         main_layout.addLayout(voice_settings_group)
+        
+        # Connect the signal for shared voice language/model combobox once in init_ui
+        self.shared_voice_language_model_combobox.currentIndexChanged.connect(self._on_shared_voice_language_model_changed)
 
         # --- API and Proxy Settings Section (Two Columns) ---
         api_proxy_layout = QHBoxLayout()
@@ -630,7 +633,9 @@ class TTSGui(QWidget):
             self.media_player.stop()
 
         # Set media content and play
-        self.media_player.setMedia(QMediaContent(QUrl.fromLocalFile(str(preview_url))))
+        # Ensure the path is absolute for QUrl.fromLocalFile
+        absolute_preview_path = Path(preview_url).resolve()
+        self.media_player.setMedia(QMediaContent(QUrl.fromLocalFile(str(absolute_preview_path))))
         self.media_player.play()
         logger.info("Audio playback initiated.")
 
@@ -737,9 +742,10 @@ class TTSGui(QWidget):
         self.shared_voice_language_model_combobox.setCurrentIndex(default_lang_index)
         logger.info(f"Populated languages/models for shared voice: {voice_data.get('name')}")
         
-        # Connect the signal after populating to avoid triggering during population
-        self.shared_voice_language_model_combobox.currentIndexChanged.connect(self._on_shared_voice_language_model_changed)
-        self._on_shared_voice_language_model_changed(default_lang_index) # Manually trigger for initial selection
+        # The signal is now connected in init_ui, so no need to connect here.
+        # Manually trigger for initial selection, as setCurrentIndex might not trigger if index is already 0
+        # or if the combobox was empty before.
+        self._on_shared_voice_language_model_changed(default_lang_index) 
 
     def _on_shared_voice_language_model_changed(self, index):
         # This method is called when a language/model is selected for a shared voice
@@ -773,8 +779,12 @@ class TTSGui(QWidget):
             self.media_player.stop()
 
         # Set media content and play
-        # Use QUrl directly for remote URLs
-        self.media_player.setMedia(QMediaContent(QUrl(preview_url)))
+        # Check if it's a local file path or a remote URL
+        if Path(preview_url).exists(): # Assuming local cached files exist
+            absolute_preview_path = Path(preview_url).resolve()
+            self.media_player.setMedia(QMediaContent(QUrl.fromLocalFile(str(absolute_preview_path))))
+        else: # Assume it's a remote URL
+            self.media_player.setMedia(QMediaContent(QUrl(preview_url)))
         self.media_player.play()
         logger.info("Shared voice audio playback initiated.")
 
@@ -838,6 +848,13 @@ class TTSGui(QWidget):
                     logger.error(f"Error clearing output directory: {e}")
         else:
             logger.warning(f"Output directory does not exist or is not a directory: {output_dir}")
+
+    def closeEvent(self, event):
+        """Event handler for when the window is closed."""
+        logger.info("Saving configuration before closing...")
+        self.update_config_from_ui() # Ensure config object is up-to-date
+        self.config.save_to_json() # Save current settings to config.json
+        event.accept() # Accept the close event
 
     class LogTextEditHandler(logging.Handler):
         def __init__(self, text_edit):

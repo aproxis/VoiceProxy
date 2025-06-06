@@ -83,7 +83,7 @@ class VoiceManager:
                                 local_preview_path = None # Mark as not available locally
                         
                         if local_preview_path and local_preview_path.exists():
-                            lang_info["preview_url"] = str(local_preview_path) # Update to local path
+                            lang_info["preview_url"] = str(local_preview_path.resolve()) # Update to absolute local path
                         else:
                             lang_info["preview_url"] = original_preview_url # Keep original if download failed
                     verified_languages.append(lang_info)
@@ -170,7 +170,7 @@ class VoiceManager:
                                     local_preview_path = None # Mark as not available locally
                             
                             if local_preview_path and local_preview_path.exists():
-                                lang_info["preview_url"] = str(local_preview_path) # Update to local path
+                                lang_info["preview_url"] = str(local_preview_path.resolve()) # Update to absolute local path
                             else:
                                 lang_info["preview_url"] = original_preview_url # Keep original if download failed
                         verified_languages.append(lang_info)
