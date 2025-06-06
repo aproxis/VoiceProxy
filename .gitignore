@@ -1,0 +1,8 @@
+*.csv
+cache/
+Audio/
+__pycache__/
+VOICE_Proxy.py
+Voice.py
+.DS_Store
+*.txt
